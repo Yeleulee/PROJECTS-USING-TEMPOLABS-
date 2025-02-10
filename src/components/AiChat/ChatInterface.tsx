@@ -4,7 +4,7 @@ import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Send, Bot } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getResponse } from "@/lib/productivityTips";
+import { generateGeminiResponse } from "@/lib/gemini";
 
 interface Message {
   id: string;
@@ -21,7 +21,7 @@ export default function ChatInterface({ onScheduleTask }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hi! I'm your productivity assistant. I can help you stay focused and manage your tasks. Try asking me for productivity tips or schedule tasks using 'Schedule [task] on [day] at [time]'!",
+      text: "Hi! I'm your AI assistant powered by Google's Gemini. I can help you with a wide range of tasks, from answering questions to helping with analysis and creative work. How can I assist you today?",
       sender: "ai",
       timestamp: new Date(),
     },
@@ -42,29 +42,27 @@ export default function ChatInterface({ onScheduleTask }: ChatInterfaceProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
-    // Get response from local productivity tips
-    const response = getResponse(input);
+    // Get response from Gemini API
+    try {
+      const response = await generateGeminiResponse(input);
 
-    // Handle scheduling if detected
-    if (response.scheduleTask && onScheduleTask) {
-      const { title, date, time } = response.scheduleTask;
-      onScheduleTask({
-        title,
-        date: new Date(date),
-        time,
-      });
-    }
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: response.text,
+        sender: "ai",
+        timestamp: new Date(),
+      };
 
-    const aiResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      text: response.text,
-      sender: "ai",
-      timestamp: new Date(),
-    };
-
-    setTimeout(() => {
       setMessages((prev) => [...prev, aiResponse]);
-    }, 500);
+    } catch (error) {
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "I apologize, but I'm having trouble connecting right now. Please try again later.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    }
   };
 
   return (
